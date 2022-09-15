@@ -1,0 +1,14 @@
+#display the first few dataset
+head(Enter_korea_by_purpose)
+
+#display last dataset
+tail(Enter_korea_by_purpose)
+
+#summary of dataset min,max,median,mean
+summary(Enter_korea_by_purpose)
+
+#access variables present in the data framework without calling dataframe
+attach(Enter_korea_by_purpose)
+
+#plots scatterplot between growth and shares
+plot(growth,share)
