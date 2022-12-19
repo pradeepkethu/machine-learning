@@ -1,0 +1,126 @@
+---
+title: "ml prrojfinal"
+author: "pradeep"
+date: "2022-12-18"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(corrgram)
+library(corrplot)
+library(caTools)
+library(Amelia)
+library(caret)
+```
+
+```{r}
+data.train <- read.csv("C:/Users/prade/Downloads/titanic.csv")
+head(data.train)
+str(data.train)
+summary(data.train)
+sum(is.na(data.train))
+which(is.na(data.train), arr.ind = T)
+
+#Data Cleaning
+data.train[data.train$Survived == 1,]$Survived <- 'Y' 
+data.train[data.train$Survived == 0,]$Survived <- 'N' 
+
+data.train$Survived <- as.factor(data.train$Survived)
+data.train$Pclass <- as.factor(data.train$Pclass)
+data.train$Sex <- as.factor(data.train$Sex)
+data.train$Parch <- factor(data.train$Parch)
+data.train$SibSp <- factor(data.train$SibSp)
+data.train$Embarked <- factor(data.train$Embarked)
+
+missmap(data.train, main="Titanic Training Data - Missings Map", col=c("yellow", "black"), legend=FALSE)
+
+summary(data.train$Age)
+#mean = 29.70, because its 177 missing values ~20% of our data, I rather input the mean instead of deleting the NA's
+
+data.train$Age[is.na(data.train$Age)] <- mean(data.train$Age, na.rm = TRUE)
+```
+
+```{r}
+#Exploratory Data Analysis 
+missmap(data.train, main="Titanic Training Data - Missings Map", col=c("yellow", "black"), legend=FALSE)
+
+ggplot(data.train, aes(Survived)) + geom_bar()
+#549 died and 342 survived
+
+#lets look at class
+ggplot(data.train,aes(Pclass)) + geom_bar(aes(fill=factor(Pclass)),alpha=0.5) + theme_bw()
+ggplot(data.train) + geom_bar(aes(x = Pclass,fill = Survived))
+#more first class passengers survived compared to 3rd class that had a higher count.
+
+#lets look at the sex
+ggplot(data.train,aes(Sex)) + geom_bar(aes(fill=factor(Sex)),alpha=0.5)
+ggplot(data.train) + geom_bar(aes(x = Sex,fill = Survived))
+#although there were more males than females, females had a higher survival rate than men.
+
+#Distribution of Male to females in first class passengers
+ggplot(data.train) + geom_bar(aes(x = Pclass,fill = Sex))
+
+#lets take a look at age 
+ggplot(data.train,aes(Age)) + geom_histogram(fill='red',bins=18,alpha=0.5)
+ggplot(data.train,aes(y = Age)) + geom_boxplot(aes(fill=Sex))
+
+#Feature engineering 
+data.train <- select(data.train,-PassengerId,-Name,-Ticket,-Cabin)
+head(data.train)
+str(data.train)
+
+#building the model
+log.model1 <- glm(Survived ~ . , family = binomial,data = data.train)
+summary(log.model1)
+
+#or I could have used new.step.model <- step(model)
+
+
+log.model2 <- glm(Survived ~ Pclass + Age + Sex + SibSp , family = binomial, data = data.train)
+summary(log.model2)
+#from the P-values, there is a strong relationship between Class, Sex and Age.
+#reject null hypothesis.
+```
+
+```{r}
+#Testing the model
+#preparing the test data set
+data.test <- read.csv("C:/Users/prade/Downloads/test.csv")
+str(data.test)
+summary(data.test)
+
+#like our test data, there are 86 NA's observed in the Age Colomn which makes up ~22% of our data
+
+data.test$Pclass <- as.factor(data.test$Pclass)
+data.test$Sex <- as.factor(data.test$Sex)
+data.test$Parch <- factor(data.test$Parch)
+data.test$SibSp <- factor(data.test$SibSp)
+data.test$Embarked <- factor(data.test$Embarked)
+
+data.test$Age[is.na(data.test$Age)] <- mean(data.test$Age, na.rm = TRUE)
+data.test <- select(data.test,-PassengerId,-Name,-Ticket,-Cabin)
+str(data.test)
+
+
+data.test$SurvivedP <- predict(log.model2,newdata = data.test,type = 'response')
+head(data.test$SurvivedP)
+head(data.test)
+
+#since the survival values range from 1 to 0, where 1 = survived and 0 = died
+#creating an if column 
+
+data.test$predictedsurvival<-ifelse(data.test$SurvivedP>0.5, 1, 0)
+head(data.test)
+
+
+```
+
